@@ -20,7 +20,7 @@ function checkIsNumber(str: string): boolean{
 if (checkIsNumber(idx)){
     const index: number = parseInt(idx, 10);
 
-    console.log(`${fib(index)} is the number of the Fibonacci Sequence at index ${index + 1}.`);
+    console.log(`${fib(index)} is the number of the Fibonacci Sequence at index ${index}.`);
 }
 
 function fib(index: number): number {
