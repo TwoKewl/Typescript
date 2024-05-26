@@ -44,4 +44,5 @@ function organizeDirectory(directory: string) {
     });
 }
 
-organizeDirectory("Enter your directory here");
+// Example
+organizeDirectory("C:\\Users\\(Your username)\\Downloads");
