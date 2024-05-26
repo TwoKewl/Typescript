@@ -107,5 +107,8 @@ rl.question("1. Search by filename \n2. Search by file extension \n3. Search by 
                     rl.close();
                 });
             });
+        default:
+            console.log(chalk.red(`Invalid input.`));
+            rl.close();
     }    
 })
