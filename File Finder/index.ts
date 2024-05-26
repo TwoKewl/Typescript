@@ -89,8 +89,9 @@ rl.question("1. Search by filename \n2. Search by file extension \n3. Search by 
                     findByFilename(searchPath, filename);
 
                     rl.close();
-                })
-            })
+                });
+            });
+            break;
         case "2":
             rl.question("Enter extension to search for : ", (searchExt) => {
                 rl.question("Enter path to search in : ", (searchPath) => {
@@ -99,6 +100,7 @@ rl.question("1. Search by filename \n2. Search by file extension \n3. Search by 
                     rl.close();
                 });
             });
+            break;
         case "3":
             rl.question("Enter file to search for : ", (searchFile) => {
                 rl.question("Enter path to search in : ", (searchPath) => {
@@ -107,6 +109,7 @@ rl.question("1. Search by filename \n2. Search by file extension \n3. Search by 
                     rl.close();
                 });
             });
+            break;
         default:
             console.log(chalk.red(`Invalid input.`));
             rl.close();
