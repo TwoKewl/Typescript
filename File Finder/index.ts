@@ -69,7 +69,7 @@ function find(searchPath: string, fileToFind: string, allFilesFound: string[] = 
                 console.log(chalk.blue(`Found instance of ${fileToFind} at ${fullPath}`));
             }
         } catch (err) {
-            // console.log(chalk.red(`Error while finding ${fileToFind}: ${err}`));
+            console.log(chalk.red(`Error while finding ${fileToFind}: ${err}`));
         } 
     }
 
