@@ -1,13 +1,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as readline from 'readline';
 import chalk from 'chalk';
 
 function find(searchPath: string, fileToFind: string, allFilesFound: string[] = []): string[] | false {
-    try {
-        const dir = fs.readdirSync(searchPath);
+    const dir = fs.readdirSync(searchPath);
 
-        for (const item of dir) {
-            const fullPath = path.join(searchPath, item);
+    for (const item of dir) {
+        const fullPath = path.join(searchPath, item);
+        try {
             const itemStat = fs.statSync(fullPath);
 
             if (itemStat.isDirectory()) {
@@ -16,14 +17,21 @@ function find(searchPath: string, fileToFind: string, allFilesFound: string[] = 
                 allFilesFound.push(item);
                 console.log(chalk.blue(`Found instance of ${fileToFind} at ${fullPath}`));
             }
-        }
+        } catch (err) {
+            console.log(chalk.red(`Error while finding ${fileToFind}: ${err}`));
+        } 
+    }
 
-        return allFilesFound;
-    } catch {
-        return false;
-    }   
+    return allFilesFound;
 }
 
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 
-// Example
-find(`C:\\Users`, `index.ts`);
+rl.question("Enter file to search for : ", (searchFile) => {
+    rl.question("Enter path to search in : ", (searchPath) => {
+        find(searchPath, searchFile);
+    })
+})
