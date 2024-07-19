@@ -14,7 +14,7 @@ export const getAllFiles = (searchPath: string, filterString: string): File[] =>
     });
 
     filesFound.forEach((file) => {
-        if (file.filename.toLowerCase().startsWith(filterString.toLowerCase())) {
+        if (file.filename.toLowerCase().includes(filterString.toLowerCase())) {
             filteredFiles.push(file);
         }
     });

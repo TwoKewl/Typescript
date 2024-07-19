@@ -87,7 +87,8 @@ class Explorer {
 
         process.stdin.on('keypress', (str, key) => {
             if (key.ctrl && key.name == 'c') { this.clearScreen(); process.exit(); }
-            if (this.listeningForKeypress || (this.readingFile && key.name == 'left ')) this.handleKeyPress(key.name ? (key.shift ? key.name.toUpperCase() : key.name.toLowerCase()) : (key.shift ? key.toUpperCase() : key.toLowerCase()));
+            if (this.listeningForKeypress && key.sequence == '.') { this.handleKeyPress(key.sequence); return; };
+            if (this.listeningForKeypress || (this.readingFile && key.name == 'left')) this.handleKeyPress(key.name ? (key.shift ? key.name.toUpperCase() : key.name.toLowerCase()) : (key.shift ? key.toUpperCase() : key.toLowerCase()));
         });
     }
 
@@ -103,6 +104,15 @@ class Explorer {
         if (keyPressed == 'up') {
             if (this.line <= 0) return;
             this.line--;
+            this.displayDirectory();
+
+            return;
+        }
+
+        if (keyPressed == '.') {
+            this.filterString = keyPressed;
+            this.line = 0;
+
             this.displayDirectory();
 
             return;
