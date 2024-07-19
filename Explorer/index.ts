@@ -1,8 +1,7 @@
 import { getAllFiles } from './fileLister';
 import * as readline from 'readline';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
-import { homedir } from 'os';
+import * as os from 'os';
 
 export interface File {
     filename: string,
@@ -20,6 +19,7 @@ class Explorer {
     listeningForKeypress: boolean;
     readingFile: boolean;
     colours: any;
+    fileExtensionMap: any;
 
     constructor(currentDirectory: string) {
         this.currentDirectory = currentDirectory;
@@ -40,6 +40,30 @@ class Explorer {
             cyan: "\x1b[36m",
             white: "\x1b[37m",
             gray: "\x1b[90m"
+        }
+
+        this.fileExtensionMap = {
+            ts: "TS  ",
+            js: "JS  ",
+            json: "{}  ",
+            py: "PY  ",
+            c: "C   ",
+            cpp: "C++ ",
+            txt: "🗎  ",
+            mp4: "VID ",
+            mov: "VID ",
+            png: "PIC ",
+            jpg: "PIC ",
+            jpeg: "PIC ",
+            jfif: "PIC ",
+            mp3: "AUD ",
+            wav: "AUD ",
+            bat: "BAT ",
+            dll: "DLL ",
+            exe: "EXE ",
+            jar: "JAR ",
+            zip: "ZIP ",
+            rar: "ZIP ",
         }
 
         this.setUpKeypress();
@@ -72,8 +96,14 @@ class Explorer {
                 if (this.line == line) process.stdout.write('\x1b[1m>\x1b[0m ');
                 else process.stdout.write('  ');
 
-                if (this.allFiles[line].isFolder) process.stdout.write('📁 ');
-                else process.stdout.write('   ');
+                if (this.allFiles[line].isFolder) process.stdout.write('📁  ');
+                else {
+                    if (Array.from(Object.keys(this.fileExtensionMap)).includes(this.allFiles[line].extension)) {
+                        process.stdout.write(this.fileExtensionMap[this.allFiles[line].extension])
+                    } else{
+                        process.stdout.write('    ');
+                    }
+                }
 
                 const file = this.allFiles[line];
                 console.log(file.filename);
@@ -87,8 +117,10 @@ class Explorer {
 
         process.stdin.on('keypress', (str, key) => {
             if (key.ctrl && key.name == 'c') { this.clearScreen(); process.exit(); }
-            if (this.listeningForKeypress && key.sequence == '.') { this.handleKeyPress(key.sequence); return; };
-            if (this.listeningForKeypress || (this.readingFile && key.name == 'left')) this.handleKeyPress(key.name ? (key.shift ? key.name.toUpperCase() : key.name.toLowerCase()) : (key.shift ? key.toUpperCase() : key.toLowerCase()));
+            try {
+                if (this.listeningForKeypress && key.sequence == '.' || key.name == 'space') { this.handleKeyPress(key.sequence); return; };
+                if (this.listeningForKeypress || (this.readingFile && key.name == 'left')) this.handleKeyPress(key.name ? (key.shift ? key.name.toUpperCase() : key.name.toLowerCase()) : (key.shift ? key.toUpperCase() : key.toLowerCase()));    
+            } catch { }
         });
     }
 
@@ -109,8 +141,8 @@ class Explorer {
             return;
         }
 
-        if (keyPressed == '.') {
-            this.filterString = keyPressed;
+        if (keyPressed == '.' || keyPressed == ' ') {
+            this.filterString += keyPressed;
             this.line = 0;
 
             this.displayDirectory();
@@ -157,13 +189,7 @@ class Explorer {
 
                     this.displayDirectory();
                 }
-            } else {
-                if (['txt', 'json'].includes(this.allFiles[this.line].extension)) {
-                    this.openFile(this.allFiles[this.line]);
-                } else {
-                    console.log(`Cannot read file: ${this.allFiles[this.line].filename}`);
-                }
-            }
+            } else this.openFile(this.allFiles[this.line]);
 
             return;
         }
@@ -171,6 +197,7 @@ class Explorer {
         if (keyPressed == 'left') {
             if (this.readingFile) {
                 this.readingFile = false;
+                process.stdout.write('\x1Bc');
                 this.displayDirectory();
                 return;
             }
@@ -198,15 +225,31 @@ class Explorer {
     }
 
     openFile(file: File): void {
-        if (file.extension == 'json') {
-            this.readingFile = true;
+        var data: string;
 
-            const data = fs.readFileSync(file.path, 'utf8');
-            this.clearScreen();
-            const json = JSON.parse(data);
-            this.highlightJson(json);
-        } else {
-            console.log(`File extension not supported.`);
+        switch (file.extension) {
+            case "json":
+                this.readingFile = true;
+
+                data = fs.readFileSync(file.path, 'utf8');
+                this.clearScreen();
+                const json = JSON.parse(data);
+                this.highlightJson(json);
+
+                break;
+            case "txt":
+                this.readingFile = true;
+
+                data = fs.readFileSync(file.path, 'utf8');
+                this.clearScreen();
+                console.log(data);
+                break;
+            
+
+            default:
+                this.displayDirectory();
+                console.log(`\n     Language not supported.`);
+                break;
         }
     }
 
@@ -256,14 +299,9 @@ class Explorer {
     }
 
     clearScreen() {
-        try {
-            const command = process.platform === 'win32' ? 'cls' : 'clear';
-            execSync(command, { stdio: 'inherit' });
-        } catch (error) {
-            console.error(`Failed to clear console: ${error}`);
-        }
+        console.clear();
     }
 }
 
-const explorer = new Explorer(homedir());
+const explorer = new Explorer(os.homedir());
 explorer.displayDirectory();
