@@ -32,6 +32,8 @@ class PowerPrompt {
     private commands: Set<Command> = new Set();
     private lastRunCommand: string = '';
     public directory: string = homedir();
+    public clipboard: string = ''; // Placeholder for plugins to use
+    public history: string[] = [];
 
     constructor() {
         if (!fs.existsSync(path.join(__dirname, 'accounts.json'))) {
@@ -45,7 +47,6 @@ class PowerPrompt {
     }
 
     async makeFirstAccount(): Promise<void> {
-        
         const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout
@@ -100,12 +101,14 @@ class PowerPrompt {
         const password = await this.privatePrompt('Password: ');
 
         if (await this.attemptLogin(username, password)) {
-            
             console.log(`Welcome, ${this.user?.username}!`);
+            this.loadCommands();
 
             this.promptCommand();
         } else {
+            console.clear();
             console.log(`Invalid credentials!`);
+            this.login();
         }        
     }
 
@@ -120,15 +123,12 @@ class PowerPrompt {
                 } else return false;
             } catch { return false; }
             
-            this.loadCommands();
             return true;
         } else return false;
     }
 
     publicPrompt(query: string): Promise<string> {
         return new Promise<string>((resolve) => {
-            
-
             const rl = readline.createInterface({
                 input: process.stdin,
                 output: process.stdout
@@ -153,6 +153,7 @@ class PowerPrompt {
 
                         console.log();
                         resolve(this.privateOutput);
+                        this.privateOutput = '';
                         return;
                     case "space":
                         this.privateOutput += ' ';
@@ -213,19 +214,23 @@ class PowerPrompt {
         const args = command.split(' ').map(arg => arg.toLowerCase());
         const cmd = args.shift();
 
-        const foundCommand = Array.from(this.commands).find((c: Command) => c.name === cmd);
+        const foundCommand = Array.from(this.commands).find((c: Command) => c.name?.toLowerCase() === cmd?.toLowerCase());
 
         if (foundCommand) {
             foundCommand.execute(args, { user: this.user as User, directory: this.directory, commands: this.commands, PowerPrompt: this });
+            this.history.push(command);
         } else {
             const foundAlias = Array.from(this.commands).find((c: Command) => c.aliases?.includes(cmd as string));
             
             if (foundAlias) {
                 foundAlias.execute(args, { user: this.user as User, directory: this.directory, commands: this.commands, PowerPrompt: this });
+                this.history.push(command);
             } else {
                 console.log(`Command not found!`);
             }
         }
+
+        if (this.history.length > 15) this.history.shift();
     }
 
     async loadCommands() {
@@ -234,11 +239,20 @@ class PowerPrompt {
 
         for (const command of commands) {
             const commandPath = path.join(commandsPath, command);
-            const commandModule: Command = require(commandPath);
+            const commandModule: Command | Array<Command> = require(commandPath);
 
-            this.commands.add(commandModule);
+            if (!commandModule) process.stdout.write(`[WARNING] Cannot load command module: ${commandPath}.`);
+            else {
+                if (Array.isArray(commandModule)) {
+                    this.commands = new Set([...this.commands, ...commandModule]);
+                } else this.commands.add(commandModule);
+            }
         }
 
+        this.addBuiltInCommands();
+    }
+
+    addBuiltInCommands(): void {
         this.addUser();
         this.setAdmin();
         this.cd();
