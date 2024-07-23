@@ -30,10 +30,10 @@ class PowerPrompt {
     private privateOutput: string = '';
     private user: User | null = null;
     private commands: Set<Command> = new Set();
-    private lastRunCommand: string = '';
     public directory: string = homedir();
-    public clipboard: string = ''; // Placeholder for plugins to use
+    public clipboard: string = '';
     public history: string[] = [];
+    public aliases: Map<string, string> = new Map();
 
     constructor() {
         if (!fs.existsSync(path.join(__dirname, 'accounts.json'))) {
@@ -66,11 +66,10 @@ class PowerPrompt {
 
             if (await this.createAccount(username, password, true)) {
                 console.log(`Account created successfully!`);
-                console.log(`You can now login.`);
+                console.log(`You can now login once restarting.`);
                 console.log(`Press any key to continue...`);
                 await this.waitForKeypress();
                 console.clear();
-                await this.login();
             } else {
                 console.log(`An error occurred while creating your account.`);
             }
@@ -219,14 +218,28 @@ class PowerPrompt {
         if (foundCommand) {
             foundCommand.execute(args, { user: this.user as User, directory: this.directory, commands: this.commands, PowerPrompt: this });
             this.history.push(command);
+            console.log();
         } else {
             const foundAlias = Array.from(this.commands).find((c: Command) => c.aliases?.includes(cmd as string));
             
             if (foundAlias) {
                 foundAlias.execute(args, { user: this.user as User, directory: this.directory, commands: this.commands, PowerPrompt: this });
                 this.history.push(command);
+                console.log();
             } else {
-                console.log(`Command not found!`);
+                const alias = this.aliases.get(cmd as string);
+                if (alias) {
+                    const foundCommand = Array.from(this.commands).find((c: Command) => c.name?.toLowerCase() === alias?.toLowerCase());
+                    if (foundCommand) {
+                        foundCommand.execute(args, { user: this.user as User, directory: this.directory, commands: this.commands, PowerPrompt: this });
+                        this.history.push(command);
+                        console.log();
+                    } else {
+                        console.log(`Command not found!`); return;
+                    }
+                } else {
+                    console.log(`Command not found!`); return;
+                }
             }
         }
 
@@ -256,6 +269,8 @@ class PowerPrompt {
         this.addUser();
         this.setAdmin();
         this.cd();
+        this.aliasKeyword();
+        this.help();
     }
 
     addUser() {
@@ -331,6 +346,51 @@ class PowerPrompt {
                     context.PowerPrompt.directory = context.PowerPrompt.correctPathCase(newDirectory);
                 } else {
                     console.log(`Directory not found!`);
+                }
+            }
+        }
+
+        this.commands.add(command);
+    }
+
+    aliasKeyword(): void {
+        const command: Command = {
+            name: "alias",
+            description: "Alias a keyword",
+            requiresAdmin: false,
+            execute: (args: string[], context: Context) => {
+                const pp = context.PowerPrompt;
+                if (args.length != 2) {
+                    console.log("Usage: alias <command> <alias>");
+                    return;
+                }
+
+                const command = args[0];
+                const alias = args[1];
+
+                pp.aliases.set(alias, command);
+            }
+        }
+
+        this.commands.add(command);
+    }
+
+    help(): void {
+        const command: Command = {
+            name: "help",
+            description: "List all commands",
+            requiresAdmin: false,
+            execute: (args: string[], context: Context) => {
+                const isAdmin = context.user.admin;
+                var commands = Array.from(context.commands).filter((c: Command) => isAdmin ? true : !c.requiresAdmin);
+                commands.sort((a, b) => {
+                    if (a.name < b.name) return -1;
+                    if (a.name > b.name) return 1;
+                    return 0;
+                });
+
+                for (const command of commands) {
+                    console.log(`${command.name}: ${command.description}`);
                 }
             }
         }
